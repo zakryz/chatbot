@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chatbot Assistant</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/mode-toggle.css">
+</head>
+<body class="min-h-screen flex flex-col" id="body-root" style="color: var(--chatbot-font-color);">
+    <!-- Custom header with toggle -->
+    <header class="fixed top-0 left-0 w-full z-20 bg-[var(--dark)] border-b border-[#333] flex items-center justify-between px-6 py-4 shadow">
+        <span class="text-xl font-bold text-white">Chatbot Assistant</span>
+        <div class="flex items-center gap-4">
+            <form id="model-selector-form" class="flex items-center gap-2">
+                <label for="model-selector" class="text-white text-sm font-medium">Model:</label>
+                <select id="model-selector" name="model"
+                    class="rounded-lg px-3 py-2 border focus:outline-none focus:ring-2 text-sm
+                        bg-[var(--dark)] text-[var(--offwhite)] border-[#444] transition-colors duration-200"
+                    style="background: var(--dark); color: var(--offwhite); border-color: #444;">
+                    {% for provider, models in model_options.items() %}
+                        <optgroup label="{{ provider|capitalize }}">
+                            {% for model in models %}
+                                <option value="{{ model.id }}" {% if model.id == selected_model %}selected{% endif %}
+                                    style="background: var(--offwhite); color: var(--dark);">
+                                    {{ model.label }}
+                                </option>
+                            {% endfor %}
+                        </optgroup>
+                    {% endfor %}
+                </select>
+            </form>
+            <button id="toggle-mode" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--offwhite)] text-[var(--dark)] font-semibold shadow hover:opacity-90 transition">
+                <span id="toggle-icon" class="material-icons">dark_mode</span>
+                <span id="toggle-label">Dark</span>
+            </button>
+        </div>
+    </header>
+    <!-- Centered chat container -->
+    <div class="flex flex-1 flex-col items-center justify-center w-full h-screen pt-20 pb-0 bg-transparent">
+        <div class="relative flex flex-col w-[70%] h-[80vh] min-h-[480px] max-h-[900px] rounded-3xl shadow-2xl bg-[var(--black)]/90 overflow-hidden">
+            <!-- Welcome state (centered) -->
+            <div id="welcome-state" class="flex flex-col items-center justify-center w-full h-full px-4">
+                <div class="text-white text-3xl font-semibold mb-8 text-center">Apa yang bisa saya bantu?</div>
+                <form id="welcome-form" class="w-full flex flex-col items-center mt-4 mb-4">
+                    <div class="bg-[#232323] rounded-3xl px-6 py-6 flex flex-col gap-3 shadow-lg w-full max-w-lg mx-auto">
+                        <div class="flex items-center gap-2 w-full">
+                            <input id="welcome-input" type="text" autocomplete="off"
+                                class="rounded-xl px-4 py-3 border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#444] bg-[#181818] text-white text-base w-full"
+                                placeholder="Tanyakan apa saja" required>
+                            <button type="submit"
+                                class="w-12 h-12 rounded-full flex items-center justify-center bg-white text-black font-bold shadow transition hover:opacity-90">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-2">
+                            <button type="button" class="flex items-center gap-1 px-3 py-1 rounded-full bg-[#232323] border border-[#444] text-white text-sm">
+                                <span class="text-lg">＋</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <!-- Chat state -->
+            <div id="chat-state" class="flex flex-col w-full h-full flex-1">
+                <!-- Chat messages container (scrollable, scrollbar hidden) -->
+                <div id="chat-window" class="flex-1 overflow-y-auto px-4 py-6 space-y-4 bg-transparent transition-all duration-300"
+                     style="scrollbar-width: none; -ms-overflow-style: none;">
+                    <!-- Messages will appear here -->
+                </div>
+            </div>
+        </div>
+        <!-- Input container (separate, always at the bottom after welcome) -->
+        <form id="chat-form" class="w-[70%] bg-[#232323] border-t border-[#333] px-4 py-3 flex items-center gap-2 z-10 shadow-lg rounded-b-3xl"
+              style="box-shadow: 0 -2px 16px 0 rgba(0,0,0,0.10); margin-top: -1.5rem;">
+            <input id="user-input" type="text" autocomplete="off"
+                class="flex-grow rounded-xl px-4 py-3 border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#444] bg-[#181818] text-white text-base"
+                placeholder="Tanyakan apa saja" required>
+            <button type="submit"
+                class="ml-2 w-12 h-12 rounded-full flex items-center justify-center bg-white text-black font-bold shadow transition hover:opacity-90">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+            </button>
+        </form>
+    </div>
+    <input type="hidden" id="selected-model" name="model" value="{{ selected_model }}">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="/static/js/chat.js"></script>
+    <script src="/static/js/mode-toggle.js"></script>
+    <script src="/static/js/model-selector.js"></script>
+    <style>
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    #chat-window::-webkit-scrollbar {
+        display: none;
+    }
+    /* Hide scrollbar for IE, Edge and Firefox */
+    #chat-window {
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none;  /* IE and Edge */
+    }
+    </style>
+</body>
+</html>

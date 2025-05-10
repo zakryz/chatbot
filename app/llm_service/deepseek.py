@@ -6,7 +6,7 @@ MODEL_PROVIDERS = {
     "deepseek-reasoner": "deepseek"
 }
 
-async def call_deepseek(messages, max_tokens, model_id):
+def call_deepseek(messages, max_tokens, model_id, stream=False):
     client = OpenAI(api_key=os.environ.get("DEEPSEEK_API_KEY"), base_url="https://api.deepseek.com")
     kwargs = {
         "model": model_id,
@@ -15,8 +15,15 @@ async def call_deepseek(messages, max_tokens, model_id):
         "temperature": 0.7,
         "stream": True
     }
-    response_text = ""
-    for chunk in client.chat.completions.create(**kwargs):
-        if hasattr(chunk.choices[0].delta, "content") and chunk.choices[0].delta.content:
-            response_text += chunk.choices[0].delta.content
-    return {"response": response_text, "model": model_id}
+    if stream:
+        def generator():
+            for chunk in client.chat.completions.create(**kwargs):
+                if hasattr(chunk.choices[0].delta, "content") and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+        return generator()
+    else:
+        response_text = ""
+        for chunk in client.chat.completions.create(**kwargs):
+            if hasattr(chunk.choices[0].delta, "content") and chunk.choices[0].delta.content:
+                response_text += chunk.choices[0].delta.content
+        return {"response": response_text, "model": model_id}

@@ -1,0 +1,150 @@
+/* Base color variables */
+:root {
+  --offwhite: #FCFAF4;
+  --beige: #DDD7C6;
+  --brown: #B0735A;
+  --dark: #232323;
+  --black: #181818;
+  --chatbot-font-color: #FCFAF4;
+}
+
+/* Light mode overrides */
+body.light {
+  --offwhite: #FCFAF4;
+  --beige: #DDD7C6;
+  --brown: #B0735A;
+  --dark: #FCFAF4;
+  --black: #fff;
+  --chatbot-font-color: #232323;
+  background: #fff !important;
+  color: #232323 !important;
+}
+
+body.light header,
+body.light #toggle-mode {
+  background: #fff !important;
+  color: #232323 !important;
+  border-color: #DDD7C6 !important;
+}
+
+body.light #chat-root,
+body.light #chat-window,
+body.light #welcome-state {
+  background: #fff !important;
+}
+
+body.light .text-white,
+body.light .text-black {
+  color: #232323 !important;
+}
+
+body.light .bg-[#232323],
+body.light .bg-dark {
+  background: #fff !important;
+}
+
+body.light #welcome-form > div,
+body.light #chat-form {
+  background: #fff !important;
+  border-color: #DDD7C6 !important;
+}
+
+body.light #welcome-input,
+body.light #user-input {
+  background: #fff !important;
+  color: #232323 !important;
+  border-color: #DDD7C6 !important;
+}
+
+body.light #welcome-form button[type="submit"],
+body.light #chat-form button[type="submit"] {
+  background: #fff !important;
+  color: #232323 !important;
+  border: 1px solid #DDD7C6 !important;
+}
+
+body.light #welcome-form button[type="submit"]:hover,
+body.light #chat-form button[type="submit"]:hover {
+  background: #B0735A !important;
+  color: #fff !important;
+}
+
+body.light #welcome-form button[type="submit"] svg,
+body.light #chat-form button[type="submit"] svg {
+  color: #232323 !important;
+  fill: #232323 !important;
+}
+
+/* Fix: Ensure "+" button text is visible in light mode */
+body.light #welcome-form button[type="button"] span {
+  color: #232323 !important;
+}
+
+body.light #welcome-form button[type="button"] {
+  background: #fff !important;
+  color: #232323 !important;
+  border-color: #DDD7C6 !important;
+}
+
+
+body.light .bg-\[var\(--beige\)\] {
+  color: #232323 !important;
+}
+
+body.dark {
+  --offwhite: #FCFAF4;
+  --beige: #DDD7C6;
+  --brown: #B0735A;
+  --dark: #232323;
+  --black: #181818;
+  --chatbot-font-color: #FCFAF4;
+  background: var(--black) !important;
+  color: #fff !important;
+}
+
+body.dark #welcome-form button[type="submit"],
+body.dark #chat-form button[type="submit"] {
+  background: #fff !important;
+  color: #232323 !important;
+  border: 1px solid #333 !important;
+}
+
+body.dark #welcome-form button[type="submit"]:hover,
+body.dark #chat-form button[type="submit"]:hover {
+  background: #B0735A !important;
+  color: #fff !important;
+}
+
+body.dark #welcome-form button[type="submit"] svg,
+body.dark #chat-form button[type="submit"] svg {
+  color: #232323 !important;
+  fill: #232323 !important;
+}
+
+body.dark #welcome-input,
+body.dark #user-input {
+  color: #fff !important;
+  background: #181818 !important;
+}
+
+#model-selector {
+  background: var(--dark);
+  color: var(--offwhite);
+  border-color: #444;
+  transition: background 0.2s, color 0.2s;
+}
+body.light #model-selector {
+  background: #fff !important;
+  color: #232323 !important;
+  border-color: #DDD7C6 !important;
+}
+body.light #model-selector option,
+body.light #model-selector optgroup {
+  background: #fff !important;
+  color: #232323 !important;
+}
+body.dark #model-selector option,
+body.dark #model-selector optgroup {
+  background: var(--offwhite) !important;
+  color: var(--dark) !important;
+}

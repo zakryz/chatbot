@@ -8,8 +8,7 @@ MODEL_PROVIDERS = {
     # Add more models/providers as needed
 }
 
-async def call_gemini(messages, max_tokens, model_id):
-    # Prepare contents as a list of types.Content, as per official docs
+def call_gemini(messages, max_tokens, model_id, stream=False):
     if isinstance(messages, list):
         user_text = "\n".join([m.get("content", "") for m in messages])
     else:
@@ -32,13 +31,23 @@ async def call_gemini(messages, max_tokens, model_id):
         max_output_tokens=max_tokens if max_tokens else None
     )
 
-    # Stream the response and concatenate the text
-    response_text = ""
-    for chunk in client.models.generate_content_stream(
-        model=model_id,
-        contents=contents,
-        config=generate_content_config,
-    ):
-        response_text += chunk.text or ""
-
-    return {"response": response_text, "model": model_id}
+    if stream:
+        def generator():
+            for chunk in client.models.generate_content_stream(
+                model=model_id,
+                contents=contents,
+                config=generate_content_config,
+            ):
+                text = getattr(chunk, "text", "") or ""
+                if text:
+                    yield text
+        return generator()
+    else:
+        response_text = ""
+        for chunk in client.models.generate_content_stream(
+            model=model_id,
+            contents=contents,
+            config=generate_content_config,
+        ):
+            response_text += getattr(chunk, "text", "") or ""
+        return {"response": response_text, "model": model_id}
