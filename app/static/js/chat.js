@@ -28,6 +28,65 @@ function showChatState() {
   chatForm.classList.remove('hidden');
 }
 
+function renderMarkdownWithMath(text) {
+  marked.setOptions({
+    gfm: true,
+    breaks: true,
+    smartLists: true,
+    smartypants: true,
+    highlight: function(code, lang) {
+      // highlight.js will handle highlighting after rendering
+      return code;
+    }
+  });
+  let html = marked.parse(text || "");
+  // Add copy button to each code block (top-right)
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+  tempDiv.querySelectorAll('pre > code').forEach((codeBlock) => {
+    const pre = codeBlock.parentElement;
+    if (pre.querySelector('.copy-btn')) return;
+    pre.style.position = 'relative';
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.type = 'button';
+    btn.innerText = 'Copy';
+    btn.setAttribute('aria-label', 'Copy code');
+    btn.onclick = function() {
+      navigator.clipboard.writeText(codeBlock.innerText);
+      btn.innerText = 'Copied!';
+      setTimeout(() => { btn.innerText = 'Copy'; }, 1200);
+    };
+    pre.appendChild(btn);
+    // Ensure code color is applied (handled by CSS)
+  });
+  // Highlight code blocks using highlight.js
+  setTimeout(() => {
+    if (window.hljs) window.hljs.highlightAll();
+  }, 0);
+  return tempDiv.innerHTML;
+}
+
+// Optional: Switch highlight.js theme on mode toggle
+document.addEventListener("DOMContentLoaded", function () {
+  const body = document.getElementById('body-root');
+  const hljsDark = document.getElementById('hljs-theme-dark');
+  const hljsLight = document.getElementById('hljs-theme-light');
+  function updateHljsTheme() {
+    if (body.classList.contains('light')) {
+      hljsDark.disabled = true;
+      hljsLight.disabled = false;
+    } else {
+      hljsDark.disabled = false;
+      hljsLight.disabled = true;
+    }
+  }
+  updateHljsTheme();
+  // Listen for mode changes (mode-toggle.js should toggle body class)
+  const observer = new MutationObserver(updateHljsTheme);
+  observer.observe(body, { attributes: true, attributeFilter: ['class'] });
+});
+
 function appendMessage(role, content) {
   updateWelcomeState();
 
@@ -39,11 +98,17 @@ function appendMessage(role, content) {
   bubble.className = role === 'user'
     ? "bg-[var(--brown)] text-[var(--offwhite)] px-4 py-3 rounded-2xl rounded-br-md max-w-[75%] shadow"
     : "bg-[var(--beige)] text-[var(--dark)] px-4 py-3 rounded-2xl rounded-bl-md max-w-[75%] shadow";
-  bubble.innerHTML = content;
-  
+  if (role === 'assistant') {
+    bubble.innerHTML = renderMarkdownWithMath(content);
+  } else {
+    bubble.innerHTML = content;
+  }
   wrapper.appendChild(bubble);
   chatWindow.appendChild(wrapper);
-  chatWindow.scrollTop = chatWindow.scrollHeight;
+  chatWindow.scrollTo({ top: chatWindow.scrollHeight, behavior: 'smooth' }); // smooth scroll
+  if (role === 'assistant' && window.MathJax) {
+    MathJax.typesetPromise([bubble]);
+  }
 }
 
 function setInputStateStreaming(streaming) {
@@ -115,8 +180,9 @@ async function sendMessage(content) {
               const data = JSON.parse(line.replace('data: ', '').replace('data:', ''));
               if (data.delta) {
                 assistantContent += data.delta;
-                bubble.innerHTML = assistantContent;
+                bubble.innerHTML = renderMarkdownWithMath(assistantContent);
                 chatWindow.scrollTop = chatWindow.scrollHeight;
+                if (window.MathJax) MathJax.typesetPromise([bubble]);
               }
               if (data.error) {
                 bubble.innerHTML = `<span class="text-red-500">${data.error}</span>`;
@@ -132,9 +198,9 @@ async function sendMessage(content) {
     } else if (!bubble.innerHTML) {
       bubble.innerHTML = '<span class="text-red-500">No response from assistant.</span>';
     }
+    if (window.MathJax) MathJax.typesetPromise([bubble]);
   } catch (err) {
     if (err.name === 'AbortError') {
-      // Stream was aborted by user
       bubble.innerHTML += '<span class="text-gray-400 ml-2">(stopped)</span>';
     } else {
       bubble.innerHTML = '<span class="text-red-500">Error: Could not get response.</span>';

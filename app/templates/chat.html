@@ -6,11 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/static/css/mode-toggle.css">
+    <link rel="stylesheet" href="/static/css/code-block.css">
+    <!-- Add highlight.js CSS for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-theme-dark">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="hljs-theme-light" disabled>
 </head>
 <body class="min-h-screen flex flex-col" id="body-root" style="color: var(--chatbot-font-color);">
     <!-- Custom header with toggle -->
     <header class="fixed top-0 left-0 w-full z-20 bg-[var(--dark)] border-b border-[#333] flex items-center justify-between px-6 py-4 shadow">
-        <span class="text-xl font-bold text-white">Chatbot Assistant</span>
+        <a href="/" class="text-xl font-bold text-white hover:underline focus:outline-none">Chatbot Assistant</a>
         <div class="flex items-center gap-4">
             <form id="model-selector-form" class="flex items-center gap-2">
                 <label for="model-selector" class="text-white text-sm font-medium">Model:</label>
@@ -37,8 +41,9 @@
         </div>
     </header>
     <!-- Centered chat container -->
-    <div class="flex flex-1 flex-col items-center justify-center w-full h-screen pt-20 pb-0 bg-transparent">
-        <div class="relative flex flex-col w-[70%] h-[80vh] min-h-[480px] max-h-[900px] rounded-3xl shadow-2xl bg-[var(--black)]/90 overflow-hidden">
+    <div class="flex flex-1 flex-col items-center justify-center w-full h-screen pt-24 pb-4 bg-transparent">
+        <div class="relative flex flex-col w-full sm:w-[90vw] lg:w-[70vw] max-w-2xl lg:max-w-[70vw] h-[80vh] min-h-[480px] max-h-[900px] rounded-3xl shadow-2xl bg-[var(--black)]/90 overflow-hidden transition-all duration-300"
+             style="margin: 0 auto;">
             <!-- Welcome state (centered) -->
             <div id="welcome-state" class="flex flex-col items-center justify-center w-full h-full px-4">
                 <div class="text-white text-3xl font-semibold mb-8 text-center">Apa yang bisa saya bantu?</div>
@@ -73,8 +78,9 @@
             </div>
         </div>
         <!-- Input container (separate, always at the bottom after welcome) -->
-        <form id="chat-form" class="w-[70%] bg-[#232323] border-t border-[#333] px-4 py-3 flex items-center gap-2 z-10 shadow-lg rounded-b-3xl"
-              style="box-shadow: 0 -2px 16px 0 rgba(0,0,0,0.10); margin-top: -1.5rem;">
+        <form id="chat-form" class="w-full max-w-2xl bg-[#232323] border-t border-[#333] px-4 py-3 flex items-center gap-2 z-10 shadow-lg rounded-b-3xl mt-[-1.5rem]
+            sm:w-[90vw] lg:w-[70vw] lg:max-w-[70vw]"
+              style="box-shadow: 0 -2px 16px 0 rgba(0,0,0,0.10); margin: 0 auto;">
             <input id="user-input" type="text" autocomplete="off"
                 class="flex-grow rounded-xl px-4 py-3 border border-[#333] focus:outline-none focus:ring-2 focus:ring-[#444] bg-[#181818] text-white text-base"
                 placeholder="Tanyakan apa saja" required>
@@ -88,9 +94,20 @@
     </div>
     <input type="hidden" id="selected-model" name="model" value="{{ selected_model }}">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Add highlight.js JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+      window.MathJax = {
+        tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+        svg: { fontCache: 'global' }
+      };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
     <script src="/static/js/chat.js"></script>
     <script src="/static/js/mode-toggle.js"></script>
     <script src="/static/js/model-selector.js"></script>
+    <script src="/static/js/code-copy.js"></script>
     <style>
     /* Hide scrollbar for Chrome, Safari and Opera */
     #chat-window::-webkit-scrollbar {
@@ -100,6 +117,61 @@
     #chat-window {
         scrollbar-width: none; /* Firefox */
         -ms-overflow-style: none;  /* IE and Edge */
+    }
+    /* Style for markdown lists in chat bubbles */
+    .bg-\[var\(--beige\)\] ul,
+    .bg-\[var\(--beige\)\] ol,
+    .bg-\[var\(--brown\)\] ul,
+    .bg-\[var\(--brown\)\] ol {
+        margin-left: 1.5em;
+        padding-left: 1em;
+        list-style-position: inside;
+    }
+    /* Add subtle background and padding for overall pleasantness */
+    body {
+        background: linear-gradient(135deg, #FCFAF4 0%, #DDD7C6 40%, #B0735A 80%, #4B4846 100%) !important;
+        min-height: 100vh;
+    }
+    /* Chat bubble improvements */
+    .bg-\[var\(--beige\)\], .bg-\[var\(--brown\)\] {
+        border-radius: 1.25rem;
+        box-shadow: 0 2px 12px 0 rgba(0,0,0,0.07);
+        padding: 1rem 1.25rem;
+        font-size: 1.05rem;
+        line-height: 1.7;
+    }
+    /* Set chat container width to 70vw */
+    .w-\[70vw\] {
+        width: 70vw !important;
+    }
+    /* Code block styling */
+    pre code {
+        display: block;
+        background: #232323;
+        color: #fff;
+        border-radius: 0.75rem;
+        padding: 1em;
+        font-size: 0.97em;
+        overflow-x: auto;
+        position: relative;
+    }
+    .copy-btn {
+        position: absolute;
+        top: 0.5em;
+        right: 0.5em;
+        background: #B0735A;
+        color: #fff;
+        border: none;
+        border-radius: 0.5em;
+        padding: 0.2em 0.7em;
+        font-size: 0.85em;
+        cursor: pointer;
+        opacity: 0.85;
+        z-index: 2;
+        transition: background 0.2s;
+    }
+    .copy-btn:hover {
+        background: #4B4846;
     }
     </style>
 </body>

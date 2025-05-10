@@ -86,7 +86,6 @@ body.light #welcome-form button[type="button"] {
   border-color: #DDD7C6 !important;
 }
 
-
 body.light .bg-\[var\(--beige\)\] {
   color: #232323 !important;
 }
@@ -147,4 +146,67 @@ body.dark #model-selector option,
 body.dark #model-selector optgroup {
   background: var(--offwhite) !important;
   color: var(--dark) !important;
+}
+
+/* Chat bubble enhancements */
+.bg-\[var\(--beige\)\], .bg-\[var\(--brown\)\] {
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.07);
+  border-radius: 1.25rem;
+  padding: 1rem 1.25rem;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+/* Chat container shadow and border */
+#chat-window, #welcome-state {
+  border-radius: 1.5rem;
+  box-shadow: 0 4px 32px 0 rgba(0,0,0,0.10);
+  background: transparent;
+}
+
+@media (min-width: 1024px) {
+  .lg\:w-\[70vw\] {
+    width: 70vw !important;
+    max-width: 70vw !important;
+  }
+}
+
+/* Copy button styling */
+.copy-btn {
+  position: absolute;
+  top: 0.5em;
+  right: 0.5em;
+  background: #B0735A;
+  color: #fff;
+  border: none;
+  border-radius: 0.5em;
+  padding: 0.2em 0.9em;
+  font-size: 0.92em;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0.92;
+  z-index: 2;
+  box-shadow: 0 2px 8px 0 rgba(0,0,0,0.10);
+  transition: background 0.2s, color 0.2s, opacity 0.2s;
+}
+.copy-btn:hover, .copy-btn:focus {
+  background: #4B4846;
+  color: #fff;
+  opacity: 1;
+  outline: none;
+}
+
+/* Code block styling */
+pre code {
+  background: #232323;
+  color: #fff;
+  border-radius: 0.75rem;
+  padding: 1em;
+  font-size: 0.97em;
+  overflow-x: auto;
+  position: relative;
+}
+body.light pre code {
+  background: #f4f4f4 !important;
+  color: #232323 !important;
 }
