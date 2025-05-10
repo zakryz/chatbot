@@ -1,11 +1,9 @@
-version: '3.8'
-
 services:
-  api:
+  chatbot:
     build: 
       context: .
       dockerfile: Dockerfile
-    container_name: chatbot-api
+    container_name: chatbot
     restart: always
     ports:
       - "8000:8000"
@@ -14,8 +12,6 @@ services:
       - ./data:/app/data
     env_file:
       - .env
-    environment:
-      - ENVIRONMENT=development
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -24,6 +20,25 @@ services:
       start_period: 10s
     networks:
       - chatbot-network
+    expose:
+      - "8000"
+  
+  nginx:
+      image: nginx:latest
+      container_name: chatbot_nginx
+      ports:
+        - "80:80"
+        - "443:443"
+      volumes:
+        - ./nginx/conf.d:/etc/nginx/conf.d:ro
+        - /etc/letsencrypt/live/gamesarcq.xyz/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
+        - /etc/letsencrypt/live/gamesarcq.xyz/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
+      depends_on:
+        chatbot:
+          condition: service_healthy
+      command: /bin/sh -c "mkdir -p /etc/nginx/ssl && nginx -g 'daemon off;'"
+      networks:
+        - chatbot-network
 
   # Optionally add a database service if needed
   # db:

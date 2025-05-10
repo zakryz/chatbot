@@ -8,7 +8,7 @@ secrets/
 *.db
 *.sqlite3
 
-conf.d/
+nginx/conf.d/default.conf
 # Python
 __pycache__/
 
@@ -20,6 +20,7 @@ logs/
 nginx/*.key
 nginx/*.pem
 nginx/*.crt
+nginx/default.conf
 nginx/ssl/
 nginx/certificates/
 nginx/.htpasswd

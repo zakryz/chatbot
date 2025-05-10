@@ -7,6 +7,7 @@ A FastAPI application for a chatbot with multiple LLM integrations (Groq, Gemini
 - FastAPI-based REST API and interactive chat UI
 - Modular LLM integration (Groq, Gemini, Deepseek)
 - Docker and Docker Compose setup
+- Nginx reverse proxy with HTTPS support (template-based config)
 - Environment-based configuration via `.env`
 - Jinja2 templated landing page and chat UI with custom color palette
 - DRY template structure (navbar and footer partials)
@@ -17,21 +18,79 @@ A FastAPI application for a chatbot with multiple LLM integrations (Groq, Gemini
 
 - Docker and Docker Compose
 - An `.env` file with your API keys (see `.env.example`)
+- (For HTTPS) A domain name and access to DNS settings
 
 ## Setup
 
-1. Ensure you have Docker and Docker Compose installed.
-2. Clone this repository.
-3. Create a `.env` file with the necessary API keys (see `.env.example`).
-4. Run the application with Docker Compose.
+1. **Clone this repository:**
+   ```bash
+   git clone https://github.com/your-repo/chatbot.git
+   cd chatbot
+   ```
 
-## Running the application
+2. **Create a `.env` file with your API keys:**
+   ```bash
+   cp .env.example .env
+   # Edit .env and fill in your keys
+   ```
+
+3. **(Optional) Adjust Nginx template for your domain:**
+   - Edit `nginx/conf.d/default.conf.template` and set `${DOMAIN}` and `${UPSTREAM}` as needed.
+   - The Docker Compose setup uses this template for Nginx configuration.
+
+4. **Run the application with Docker Compose:**
+   ```bash
+   docker-compose up -d      # Build and run the services
+   docker-compose logs -f    # View logs
+   docker-compose down       # Stop the services
+   ```
+
+## Setting up Nginx with HTTPS (Let's Encrypt)
+
+This project uses Nginx as a reverse proxy for HTTPS support. The configuration is template-based for easy reuse.
+
+### 1. Prepare your domain
+
+- Point your domain's A record to your server's public IP.
+
+### 2. Obtain SSL certificates with Certbot
+
+On your server, install Certbot and request certificates:
 
 ```bash
-docker-compose up -d      # Build and run the services
-docker-compose logs -f    # View logs
-docker-compose down       # Stop the services
+sudo apt update
+sudo apt install certbot
+sudo apt install python3-certbot-nginx
+sudo certbot certonly --standalone -d yourdomain.com
 ```
+
+Certificates will be saved in `/etc/letsencrypt/live/yourdomain.com/`.
+
+### 3. Configure Nginx
+
+- The Nginx container uses `nginx/conf.d/default.conf.template` as a template.
+- Docker Compose mounts your certificates into the container:
+  ```yaml
+  volumes:
+    - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    - /etc/letsencrypt/live/yourdomain.com/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
+    - /etc/letsencrypt/live/yourdomain.com/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
+  ```
+- Update `${DOMAIN}` in the template or use environment substitution.
+
+### 4. Reload Nginx
+
+- Restart the Nginx container to apply changes:
+  ```bash
+  docker-compose restart nginx
+  ```
+
+### 5. Automatic Certificate Renewal
+
+- Certbot certificates renew automatically. Add a cron job to reload Nginx after renewal:
+  ```bash
+  0 3 * * * certbot renew --post-hook "docker-compose restart nginx"
+  ```
 
 ## API Endpoints
 
@@ -68,6 +127,10 @@ chatbot/
 ├── requirements.txt
 ├── Dockerfile
 ├── docker-compose.yml
+├── nginx/
+│   └── conf.d/
+│       ├── default.conf.template
+│       └── default.conf (gitignored)
 ├── .env.example
 └── README.md
 ```
