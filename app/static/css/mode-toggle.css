@@ -38,7 +38,7 @@ body.light .text-black {
   color: #232323 !important;
 }
 
-body.light .bg-[#232323],
+body.light .bg-\[\#232323\],
 body.light .bg-dark {
   background: #fff !important;
 }
