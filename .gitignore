@@ -1,0 +1,31 @@
+# Environment variables and secrets
+.env
+*.pem
+*.key
+secrets/
+
+# Database files
+*.db
+*.sqlite3
+
+conf.d/
+# Python
+__pycache__/
+
+# Logs
+logs/
+*.log
+
+# Nginx sensitive files
+nginx/*.key
+nginx/*.pem
+nginx/*.crt
+nginx/ssl/
+nginx/certificates/
+nginx/.htpasswd
+nginx/auth/
+nginx/sites-enabled/*.conf.backup
+
+# Keep nginx template files only
+!nginx/conf.d/*.conf.template
+!nginx/templates/

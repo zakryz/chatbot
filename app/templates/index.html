@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chatbot - Landing Page</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --offwhite: #FCFAF4;
+        --beige: #DDD7C6;
+        --brown: #B0735A;
+        --dark: #4B4846;
+        --black: #222;
+      }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col" style="background: linear-gradient(to bottom, #FCFAF4 0%, #DDD7C6 35%, #B0735A 70%, #4B4846 100%);">
+    {% include "_navbar.html" %}
+    <main class="flex-grow flex items-center justify-center px-2">
+        <div class="rounded-lg shadow-lg p-4 sm:p-8 max-w-xl w-full text-center" style="background-color: rgba(252,250,244,0.95);">
+            <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold mb-4" style="color: var(--dark);">
+                Welcome to the Chatbot created by Muhammad Zakry Zoekruf
+            </h2>
+            <p class="mb-6 text-sm sm:text-base md:text-lg" style="color: var(--brown);">
+                This is a unified API for interacting with multiple Large Language Models (LLMs).<br>
+                Easily integrate AI-powered chat into your applications.
+            </p>
+            <a href="/docs"
+               class="inline-block px-4 py-2 sm:px-6 sm:py-3 rounded shadow hover:opacity-90 transition text-sm sm:text-base md:text-lg"
+               style="background-color: var(--brown); color: var(--offwhite);">
+                Explore the API
+            </a>
+        </div>
+    </main>
+    {% include "_footer.html" %}
+</body>
+</html>
