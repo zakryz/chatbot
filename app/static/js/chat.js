@@ -28,22 +28,8 @@ function showChatState() {
   chatForm.classList.remove('hidden');
 }
 
-function renderMarkdownWithMath(text) {
-  marked.setOptions({
-    gfm: true,
-    breaks: true,
-    smartLists: true,
-    smartypants: true,
-    highlight: function(code, lang) {
-      // highlight.js will handle highlighting after rendering
-      return code;
-    }
-  });
-  let html = marked.parse(text || "");
-  // Add copy button to each code block (top-right)
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = html;
-  tempDiv.querySelectorAll('pre > code').forEach((codeBlock) => {
+function addCopyButtonsToCodeBlocks(container) {
+  container.querySelectorAll('pre > code').forEach((codeBlock) => {
     const pre = codeBlock.parentElement;
     if (pre.querySelector('.copy-btn')) return;
     pre.style.position = 'relative';
@@ -55,19 +41,32 @@ function renderMarkdownWithMath(text) {
     btn.onclick = function() {
       navigator.clipboard.writeText(codeBlock.innerText);
       btn.innerText = 'Copied!';
-      setTimeout(() => { btn.innerText = 'Copy'; }, 1200);
+      setTimeout(() => { btn.innerText = 'Copy'; }, 600);
     };
     pre.appendChild(btn);
-    // Ensure code color is applied (handled by CSS)
   });
-  // Highlight code blocks using highlight.js
+}
+
+function renderMarkdownWithMath(text) {
+  marked.setOptions({
+    gfm: true,
+    breaks: true,
+    smartLists: true,
+    smartypants: true,
+    highlight: function(code, lang) {
+      return code;
+    }
+  });
+  let html = marked.parse(text || "");
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+
   setTimeout(() => {
     if (window.hljs) window.hljs.highlightAll();
   }, 0);
   return tempDiv.innerHTML;
 }
 
-// Optional: Switch highlight.js theme on mode toggle
 document.addEventListener("DOMContentLoaded", function () {
   const body = document.getElementById('body-root');
   const hljsDark = document.getElementById('hljs-theme-dark');
@@ -100,6 +99,8 @@ function appendMessage(role, content) {
     : "bg-[var(--beige)] text-[var(--dark)] px-4 py-3 rounded-2xl rounded-bl-md max-w-[75%] shadow";
   if (role === 'assistant') {
     bubble.innerHTML = renderMarkdownWithMath(content);
+    // Add copy buttons to code blocks in this bubble
+    addCopyButtonsToCodeBlocks(bubble);
   } else {
     bubble.innerHTML = content;
   }
@@ -133,6 +134,9 @@ function setInputStateStreaming(streaming) {
 }
 
 async function sendMessage(content) {
+  if (messages.length === 0 && window.botMarkdownInstructions) {
+    content = window.botMarkdownInstructions + "\n\n" + content;
+  }
   appendMessage('user', content);
   messages.push({ role: 'user', content });
 
@@ -148,60 +152,81 @@ async function sendMessage(content) {
 
   setInputStateStreaming(true);
 
+  let assistantContent = '';
+  let abortController = new AbortController();
+  streamController = abortController;
+
+  // Helper for typing animation
+  async function typeText(target, fullText, prevText = "") {
+    // Only type the new part
+    let start = prevText.length;
+    for (let i = start; i < fullText.length; i++) {
+      if (!isStreaming) break;
+      target.innerHTML = renderMarkdownWithMath(fullText.slice(0, i + 1));
+      addCopyButtonsToCodeBlocks(target);
+      chatWindow.scrollTop = chatWindow.scrollHeight;
+      if (window.MathJax) MathJax.typesetPromise([target]);
+      await new Promise(r => setTimeout(r, 0)); // Typing speed (ms per char)
+    }
+  }
+
   try {
     const model = selectedModelInput ? selectedModelInput.value : 'llama-3.3-70b-versatile';
-    streamController = new AbortController();
     const res = await fetch('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, model: model, max_tokens: 800 }),
-      signal: streamController.signal
+      body: JSON.stringify({ messages, model: model, max_tokens: 8192, stream: true }),
+      signal: abortController.signal
     });
 
-    if (!res.body || !window.ReadableStream) {
-      bubble.innerHTML = '<span class="text-red-500">Streaming not supported.</span>';
+    if (!res.ok) {
+      bubble.innerHTML = '<span class="text-red-500">Error: Could not get response.</span>';
       setInputStateStreaming(false);
       return;
     }
 
-    bubble.innerHTML = '';
-    let assistantContent = '';
+    if (!res.body || !res.body.getReader) {
+      // Not a stream, fallback to JSON
+      const data = await res.json();
+      assistantContent = data.response || '';
+      await typeText(bubble, assistantContent);
+      if (assistantContent.trim() !== "") {
+        messages.push({ role: 'assistant', content: assistantContent });
+      } else {
+        bubble.innerHTML = '<span class="text-red-500">No response from assistant.</span>';
+      }
+      setInputStateStreaming(false);
+      streamController = null;
+      return;
+    }
+
+    // Stream response with typing animation
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
+    assistantContent = '';
+    bubble.innerHTML = '';
     let done = false;
-    while (!done && isStreaming) {
-      const { value, done: doneReading } = await reader.read();
-      done = doneReading;
+    let prevContent = '';
+    while (!done) {
+      const { value, done: streamDone } = await reader.read();
       if (value) {
         const chunk = decoder.decode(value, { stream: true });
-        chunk.split('\n').forEach(line => {
-          if (line.startsWith('data:')) {
-            try {
-              const data = JSON.parse(line.replace('data: ', '').replace('data:', ''));
-              if (data.delta) {
-                assistantContent += data.delta;
-                bubble.innerHTML = renderMarkdownWithMath(assistantContent);
-                chatWindow.scrollTop = chatWindow.scrollHeight;
-                if (window.MathJax) MathJax.typesetPromise([bubble]);
-              }
-              if (data.error) {
-                bubble.innerHTML = `<span class="text-red-500">${data.error}</span>`;
-              }
-            } catch (e) {
-            }
-          }
-        });
+        assistantContent += chunk;
+        // Animate only the new part
+        await typeText(bubble, assistantContent, prevContent);
+        prevContent = assistantContent;
       }
+      done = streamDone;
+      if (!isStreaming) break;
     }
     if (assistantContent.trim() !== "") {
       messages.push({ role: 'assistant', content: assistantContent });
-    } else if (!bubble.innerHTML) {
+    } else {
       bubble.innerHTML = '<span class="text-red-500">No response from assistant.</span>';
     }
-    if (window.MathJax) MathJax.typesetPromise([bubble]);
   } catch (err) {
-    if (err.name === 'AbortError') {
-      bubble.innerHTML += '<span class="text-gray-400 ml-2">(stopped)</span>';
+    if (abortController.signal.aborted) {
+      bubble.innerHTML = '<span class="italic text-gray-400">Response stopped.</span>';
     } else {
       bubble.innerHTML = '<span class="text-red-500">Error: Could not get response.</span>';
     }
@@ -226,7 +251,6 @@ welcomeForm.addEventListener('submit', async (e) => {
 chatForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (isStreaming) {
-    // Stop the stream
     if (streamController) streamController.abort();
     setInputStateStreaming(false);
     return;
@@ -236,7 +260,6 @@ chatForm.addEventListener('submit', async (e) => {
   userInput.value = '';
   await sendMessage(content);
 });
-
 
 chatForm.querySelector('button[type="submit"]').addEventListener('click', (e) => {
   if (isStreaming) {

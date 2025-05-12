@@ -11,24 +11,16 @@ PROVIDERS = [
     # Add more providers here as (MODEL_DICT, HANDLER)
 ]
 
-DEFAULT_MODEL = "llama-3.1-8b-instant"
+DEFAULT_MODEL = "gemini-2.5-flash-preview-04-17"
 
-async def stream_llm_response(model: str, messages: list, max_tokens: int):
+async def call_llm(messages: list, max_tokens: int, model: str):
     """
-    Async generator for streaming LLM responses.
-    Yields: text chunks (str)
+    Calls the LLM with the given messages and model.
+    Returns: LLM response (str or generator)
     """
     if not model:
         model = DEFAULT_MODEL
     for model_dict, handler in PROVIDERS:
         if model in model_dict:
-            # Handler must be a streaming generator
-            gen = handler(messages, max_tokens, model, stream=True)
-            if asyncio.iscoroutinefunction(gen):
-                async for chunk in gen:
-                    yield chunk
-            else:
-                for chunk in gen:
-                    yield chunk
-            return
+            return await run_in_threadpool(handler, messages, max_tokens, model, True)
     raise ValueError(f"Model '{model}' is not supported.")

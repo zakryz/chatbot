@@ -9,45 +9,36 @@ MODEL_PROVIDERS = {
 }
 
 def call_gemini(messages, max_tokens, model_id, stream=False):
-    if isinstance(messages, list):
-        user_text = "\n".join([m.get("content", "") for m in messages])
-    else:
-        user_text = str(messages)
-
-    contents = [
-        types.Content(
-            role="user",
-            parts=[types.Part.from_text(text=user_text)],
-        ),
-    ]
-
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY environment variable not set")
 
-    client = genai.Client(api_key=api_key)
-    generate_content_config = types.GenerateContentConfig(
-        response_mime_type="text/plain",
-        max_output_tokens=max_tokens if max_tokens else None
-    )
+    if isinstance(messages, list) and messages and isinstance(messages[0], dict):
+        messages = [m["content"] for m in messages]
 
-    if stream:
-        def generator():
-            for chunk in client.models.generate_content_stream(
-                model=model_id,
-                contents=contents,
-                config=generate_content_config,
-            ):
-                text = getattr(chunk, "text", "") or ""
-                if text:
-                    yield text
-        return generator()
-    else:
-        response_text = ""
-        for chunk in client.models.generate_content_stream(
+    client = genai.Client(api_key=api_key)
+    response = client.models.generate_content(
+        model=model_id,
+        contents=messages,
+        config=types.GenerateContentConfig(
+            temperature=0.5,
+            max_output_tokens=max_tokens if max_tokens is not None else 8192
+        ),
+    )
+    if not stream:
+        return response.text
+
+    def _stream_generator():
+        response = client.models.generate_content_stream(
             model=model_id,
-            contents=contents,
-            config=generate_content_config,
-        ):
-            response_text += getattr(chunk, "text", "") or ""
-        return {"response": response_text, "model": model_id}
+            contents=messages,
+            config=types.GenerateContentConfig(
+                temperature=0.5,
+                max_output_tokens=max_tokens if max_tokens is not None else 8192
+            ),
+        )
+        for chunk in response:
+            if hasattr(chunk, "text") and chunk.text:
+                yield chunk.text
+                
+    return _stream_generator()

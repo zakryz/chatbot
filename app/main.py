@@ -3,17 +3,18 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import Request
+from fastapi import Request, Body
 from pydantic import BaseModel
 import os
 from typing import Optional, List, Dict
 import logging
 from dotenv import load_dotenv
-from app.llm_service.router import stream_llm_response
+from app.llm_service.router import call_llm
 from app.llm_service.groq import MODEL_PROVIDERS as GROQ_MODELS
 from app.llm_service.gemini import MODEL_PROVIDERS as GEMINI_MODELS
 from app.llm_service.deepseek import MODEL_PROVIDERS as DEEPSEEK_MODELS
 import json
+import asyncio
 
 
 # Load environment variables
@@ -55,32 +56,48 @@ class ChatResponse(BaseModel):
 class ChatRequest(BaseModel):
     messages: List[Message]
     model: Optional[str] = list(GROQ_MODELS.keys())[0]
-    max_tokens: Optional[int] = 800
+    max_tokens: Optional[int] = 12800
+    stream: Optional[bool] = False
 
 # Health check endpoint
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
 
-# Chat endpoint
+# Chat endpoint supporting streaming and non-streaming
 @app.post("/chat")
-async def chat_stream(request: ChatRequest):
+async def chat(request: Request, body: dict = Body(...)):
     """
-    Streaming chat endpoint.
+    Chat endpoint supporting streaming and non-streaming.
     """
-    async def event_generator():
-        try:
-            messages = [msg.dict() for msg in request.messages]
-            async for chunk in stream_llm_response(
-                model=request.model,
-                messages=messages,
-                max_tokens=request.max_tokens
-            ):
-                # Send as JSON lines for frontend parsing
-                yield f"data: {json.dumps({'delta': chunk})}\n\n"
-        except Exception as e:
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    try:
+        messages = body.get("messages", [])
+        model = body.get("model", list(GROQ_MODELS.keys())[0])
+        max_tokens = body.get("max_tokens", 12800)
+        stream = body.get("stream", False)
+        # Ensure messages are dicts
+        messages = [msg if isinstance(msg, dict) else msg.dict() for msg in messages]
+
+        if stream:
+            # Streaming response
+            async def text_stream():
+                llm_stream = await call_llm(messages, max_tokens, model)
+                # If llm_stream is a generator, iterate and yield
+                for chunk in llm_stream:
+                    yield chunk
+                    await asyncio.sleep(0)  # Yield control to event loop for immediate flush
+            return StreamingResponse(text_stream(), media_type="text/plain")
+        else:
+            # Non-streaming response
+            response = await call_llm(messages, max_tokens, model)
+            # If response is a generator, join it
+            if hasattr(response, "__iter__") and not isinstance(response, str):
+                response = "".join(response)
+            elif isinstance(response, dict):
+                response = str(response)
+            return {"response": response, "model": model}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Root endpoint
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
