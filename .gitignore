@@ -1,22 +1,51 @@
 # Environment variables and secrets
 .env
+*.env
+!.env.example
 *.pem
 *.key
 secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
 
 # Database files
 *.db
 *.sqlite3
 
-nginx/conf.d/default.conf
-# Python
-__pycache__/
-
 # Logs
 logs/
 *.log
 
+# Docker
+.docker/
+docker-volumes/
+postgres_data/
+
 # Nginx sensitive files
+nginx/conf.d/default.conf
 nginx/*.key
 nginx/*.pem
 nginx/*.crt
@@ -30,3 +59,23 @@ nginx/sites-enabled/*.conf.backup
 # Keep nginx template files only
 !nginx/conf.d/*.conf.template
 !nginx/templates/
+
+# Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.settings/
+.classpath
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

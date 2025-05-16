@@ -6,9 +6,13 @@
                 <a href="/chat" class="hover:underline" style="color: var(--brown);">Chatbot</a>
                 <a href="/docs" class="hover:underline" style="color: var(--brown);">API Docs</a>
                 <a href="https://github.com/zakryz/chatbot/" class="hover:underline" style="color: var(--brown);">GitHub</a>
+                {% if current_user and current_user.is_admin %}
+                <a href="/admin/users" class="hover:underline font-bold" style="color: var(--brown);">Users Management</a>
+                {% endif %}
                 <a href="/logout" class="hover:underline" style="color: var(--brown);">Logout ({{ username }})</a>
             {% else %}
                 <a href="https://github.com/zakryz/chatbot/" class="hover:underline" style="color: var(--brown);">GitHub</a>
+                <a href="/register" class="hover:underline" style="color: var(--brown);">Register</a>
                 <a href="/login" class="hover:underline" style="color: var(--brown);">Login</a>
             {% endif %}
         </nav>

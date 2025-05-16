@@ -9,3 +9,11 @@ openai
 jinja2
 python-multipart==0.0.6
 httpx
+# Database dependencies
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.5
+passlib[bcrypt]>=1.7.4
+bcrypt>=3.2.2
+alembic>=1.7.5
+python-jose[cryptography]>=3.3.0
+pydantic[email]
