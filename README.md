@@ -9,7 +9,7 @@ A FastAPI application for a chatbot with multiple LLM integrations (Groq, Gemini
 - Docker and Docker Compose setup
 - Nginx reverse proxy with HTTPS support (template-based config)
 - Environment-based configuration via `.env`
-- Jinja2 templated landing page and chat UI with custom color palette
+- Jinja2 templated chat UI with custom color palette
 - DRY template structure (navbar and footer partials)
 - Static files support (for CSS, JS, images)
 - Model selection in chat UI
@@ -24,7 +24,7 @@ A FastAPI application for a chatbot with multiple LLM integrations (Groq, Gemini
 
 1. **Clone this repository:**
    ```bash
-   git clone https://github.com/your-repo/chatbot.git
+   git clone https://github.com/zakryz/chatbot.git
    cd chatbot
    ```
 
@@ -45,60 +45,10 @@ A FastAPI application for a chatbot with multiple LLM integrations (Groq, Gemini
    docker-compose down       # Stop the services
    ```
 
-## Setting up Nginx with HTTPS (Let's Encrypt)
-
-This project uses Nginx as a reverse proxy for HTTPS support. The configuration is template-based for easy reuse.
-
-### 1. Prepare your domain
-
-- Point your domain's A record to your server's public IP.
-
-### 2. Obtain SSL certificates with Certbot
-
-On your server, install Certbot and request certificates:
-
-```bash
-sudo apt update
-sudo apt install certbot
-sudo apt install python3-certbot-nginx
-sudo certbot certonly --standalone -d yourdomain.com
-```
-
-Certificates will be saved in `/etc/letsencrypt/live/yourdomain.com/`.
-
-### 3. Configure Nginx
-
-- The Nginx container uses `nginx/conf.d/default.conf.template` as a template.
-- Docker Compose mounts your certificates into the container:
-  ```yaml
-  volumes:
-    - ./nginx/conf.d:/etc/nginx/conf.d:ro
-    - /etc/letsencrypt/live/yourdomain.com/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
-    - /etc/letsencrypt/live/yourdomain.com/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
-  ```
-- Update `${DOMAIN}` in the template or use environment substitution.
-
-### 4. Reload Nginx
-
-- Restart the Nginx container to apply changes:
-  ```bash
-  docker-compose restart nginx
-  ```
-
-### 5. Automatic Certificate Renewal
-
-- Certbot certificates renew automatically. Add a cron job to reload Nginx after renewal:
-  ```bash
-  0 3 * * * certbot renew --post-hook "docker-compose restart nginx"
-  ```
-
 ## API Endpoints
 
-- `GET /` — Landing page (Jinja2 template)
-- `GET /chat` — Interactive chat UI (model selection supported)
-- `GET /health` — Health check endpoint
+- `GET /` — Chatbot UI (Jinja2 template)
 - `POST /chat` — Chat endpoint (send messages to LLMs, streaming response)
-- `GET /docs` — Interactive API documentation (Swagger UI)
 - `GET /static/*` — Static files (CSS, JS, images)
 
 ## Project Structure
@@ -120,7 +70,6 @@ chatbot/
 │   │       ├── mode-toggle.js
 │   │       └── model-selector.js
 │   └── templates/
-│       ├── index.html
 │       ├── chat.html
 │       ├── _navbar.html
 │       └── _footer.html
@@ -148,7 +97,6 @@ uvicorn app.main:app --reload
 
 ## Customization
 
-- **Landing Page:** Edit `app/templates/index.html` for your homepage content and style.
 - **Chat UI:** Edit `app/templates/chat.html` for the chat interface.
 - **Navbar/Footer:** Edit `app/templates/_navbar.html` and `app/templates/_footer.html` for DRY, reusable layout.
 - **Color Palette:** Adjust CSS variables in your templates or `static/css/mode-toggle.css` for branding.

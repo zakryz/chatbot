@@ -1,18 +1,23 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request, Response, Depends, Form, Cookie, APIRouter
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, RedirectResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import Request, Body
+from urllib.parse import quote
 from pydantic import BaseModel
-import os
+from pathlib import Path
 from typing import Optional, List, Dict
-import logging
 from dotenv import load_dotenv
 from app.llm_service.router import call_llm
 from app.llm_service.groq import MODEL_PROVIDERS as GROQ_MODELS
 from app.llm_service.gemini import MODEL_PROVIDERS as GEMINI_MODELS
 from app.llm_service.deepseek import MODEL_PROVIDERS as DEEPSEEK_MODELS
+import httpx
+import os
+import logging
+import secrets
+import time
 import json
 import asyncio
 
@@ -34,6 +39,8 @@ app = FastAPI(
     version="0.1.0",
 )
 
+sessions = {}
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -43,6 +50,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Define credentials 
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
+if not ADMIN_USERNAME:
+    raise ValueError("ADMIN_USERNAME environment variable not set")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+if not ADMIN_PASSWORD:
+    raise ValueError("ADMIN_PASSWORD environment variable not set")
 
 # Define data models
 class Message(BaseModel):
@@ -64,12 +78,125 @@ class ChatRequest(BaseModel):
 async def health_check():
     return {"status": "healthy"}
 
-# Chat endpoint supporting streaming and non-streaming
+# Router
+router = APIRouter()
+
+# Root endpoint
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+templates = Jinja2Templates(directory="app/templates")
+
+def get_session(request: Request):
+    session_id = request.cookies.get("session_id")
+    if session_id and session_id in sessions:
+        session = sessions[session_id]
+        if time.time() - session["created_at"] <= 3600:
+            return session
+    return None
+
+def require_auth(request: Request):
+    session = get_session(request)
+    if not session:
+        # Redirect to root with notification
+        redirect_url = "/?error=You%20need%20to%20login%20to%20access%20this%20page"
+        raise RedirectResponse(url=redirect_url, status_code=303)
+    return session
+
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    is_authenticated = False
+    username = None
+    session = get_session(request)
+    if session:
+        is_authenticated = True
+        username = session["username"]
+    error = request.query_params.get("error")
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "is_authenticated": is_authenticated,
+        "username": username,
+        "error": error
+    })
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request, redirect: str = "/"):
+    session = get_session(request)
+    if session:
+        return RedirectResponse(url="/", status_code=303)
+    return templates.TemplateResponse("login.html", {"request": request, "redirect": redirect})
+
+@app.post("/login")
+async def login(
+    response: Response,
+    username: str = Form(...),
+    password: str = Form(...),
+    redirect: str = Form("/")
+):
+    # Validate credentials
+    if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+        # Create session
+        session_id = secrets.token_urlsafe(32)
+        sessions[session_id] = {
+            "username": username,
+            "created_at": time.time()
+        }
+        
+        # Set cookie - Fix: Remove secure=True for development environments
+        response = RedirectResponse(url=redirect, status_code=303)
+        response.set_cookie(
+            key="session_id",
+            value=session_id,
+            httponly=True,
+            max_age=3600,  # 1 hour
+            # secure=True,  # Comment out for non-HTTPS environments
+            samesite="lax"
+        )
+        return response
+    
+    # Invalid credentials
+    return RedirectResponse(
+        url=f"/login?error=Invalid%20credentials&redirect={quote(redirect)}",
+        status_code=303
+    )
+
+@app.get("/logout")
+async def logout(response: Response, session_id: Optional[str] = Cookie(None)):
+    # Remove session
+    if session_id and session_id in sessions:
+        sessions.pop(session_id)
+    
+    # Clear cookie
+    response = RedirectResponse(url="/", status_code=303)
+    response.delete_cookie(key="session_id")
+    return response
+
+# --- Protected endpoints below ---
+
+@app.get("/chat", response_class=HTMLResponse)
+async def chat_page(request: Request):
+    session = get_session(request)
+    if not session:
+        # Use query parameter to specify the page that required login
+        redirect_url = f"/login?redirect={quote('/chat')}"
+        return RedirectResponse(url=redirect_url, status_code=303)
+    
+    model_options = get_model_options()
+    selected_model = next(iter(GROQ_MODELS.keys()), "")
+    return templates.TemplateResponse(
+        "chat.html",
+        {
+            "request": request,
+            "model_options": model_options,
+            "selected_model": selected_model,
+            "is_authenticated": True,
+            "username": session["username"]
+        }
+    )
+
 @app.post("/chat")
 async def chat(request: Request, body: dict = Body(...)):
-    """
-    Chat endpoint supporting streaming and non-streaming.
-    """
+    session = get_session(request)
+    if not session:
+        return RedirectResponse(url="/?error=You%20need%20to%20login%20to%20access%20this%20page", status_code=303)
     try:
         messages = body.get("messages", [])
         model = body.get("model", list(GROQ_MODELS.keys())[0])
@@ -99,11 +226,6 @@ async def chat(request: Request, body: dict = Body(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Root endpoint
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-templates = Jinja2Templates(directory="app/templates")
-
-
 def get_model_options():
     options = {
         "groq": [
@@ -121,19 +243,43 @@ def get_model_options():
     }
     return options
 
-@app.get("/", response_class=HTMLResponse)
-async def root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+@app.get("/validate")
+async def validate_session(session_id: Optional[str] = Cookie(None)):
+    # Check if session exists
+    if not session_id or session_id not in sessions:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     
-@app.get("/chat", response_class=HTMLResponse)
-async def chat_page(request: Request):
-    model_options = get_model_options()
-    selected_model = next(iter(GROQ_MODELS.keys()), "")
-    return templates.TemplateResponse(
-        "chat.html",
-        {
-            "request": request,
-            "model_options": model_options,
-            "selected_model": selected_model
-        }
-    )
+    # Check if session is expired (1 hour)
+    session = sessions[session_id]
+    if time.time() - session["created_at"] > 3600:
+        sessions.pop(session_id)
+        raise HTTPException(status_code=401, detail="Session expired")
+    
+    return {"authenticated": True, "username": session["username"]}
+
+async def redirect_if_not_authenticated(request: Request, session_id: Optional[str] = Cookie(None)):
+    # Check if session exists
+    if not session_id or session_id not in sessions:
+        # Get current path to redirect back after login
+        current_path = request.url.path
+        if request.url.query:
+            current_path = f"{current_path}?{request.url.query}"
+        
+        # Redirect to login with the current URL as redirect parameter
+        return RedirectResponse(
+            url=f"/login?redirect={quote(current_path)}",
+            status_code=303
+        )
+    
+    # Check if session is expired (1 hour)
+    session = sessions[session_id]
+    if time.time() - session["created_at"] > 3600:
+        sessions.pop(session_id)
+        return RedirectResponse(
+            url=f"/login?redirect={quote(request.url.path)}",
+            status_code=303
+        )
+    
+    # Session is valid, return the session data
+    return session
+

@@ -20,6 +20,11 @@
     {% include "_navbar.html" %}
     <main class="flex-grow flex items-center justify-center px-2">
         <div class="rounded-lg shadow-lg p-4 sm:p-8 max-w-xl w-full text-center" style="background-color: rgba(252,250,244,0.95);">
+            {% if error %}
+            <div class="mb-4 p-2 rounded bg-red-100 text-red-700 border border-red-300">
+                {{ error }}
+            </div>
+            {% endif %}
             <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold mb-4" style="color: var(--dark);">
                 Welcome to the Chatbot created by Muhammad Zakry Zoekruf
             </h2>

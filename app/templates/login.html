@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Chatbot API</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --offwhite: #FCFAF4;
+        --beige: #DDD7C6;
+        --brown: #B0735A;
+        --dark: #4B4846;
+        --black: #222;
+      }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col" style="background: linear-gradient(to bottom, #FCFAF4 0%, #DDD7C6 35%, #B0735A 70%, #4B4846 100%);">
+    {% set is_authenticated = False %}
+    {% set username = None %}
+    {% include "_navbar.html" %}
+    
+    <main class="flex-grow flex items-center justify-center px-2">
+        <div class="rounded-lg shadow-lg p-4 sm:p-8 max-w-xl w-full" style="background-color: rgba(252,250,244,0.95);">
+            <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold mb-4 text-center" style="color: var(--dark);">Login</h2>
+            
+            {% if request.query_params.get('error') %}
+            <div class="mb-4 p-2 rounded bg-red-100 text-red-700 border border-red-300">
+                {{ request.query_params.get('error') }}
+            </div>
+            {% endif %}
+            
+            {% if request.query_params.get('redirect') and request.query_params.get('redirect') != '/' %}
+            <div class="mb-4 p-2 rounded bg-gray-100 text-gray-700 border border-gray-300">
+                Please log in to access this resource.
+            </div>
+            {% endif %}
+            
+            <form method="post" action="/login">
+                <div class="mb-4">
+                    <label for="username" class="block mb-2 font-medium" style="color: var(--dark);">Username</label>
+                    <input type="text" id="username" name="username" required 
+                           class="w-full p-2 border border-gray-300 rounded">
+                </div>
+                
+                <div class="mb-6">
+                    <label for="password" class="block mb-2 font-medium" style="color: var(--dark);">Password</label>
+                    <input type="password" id="password" name="password" required 
+                           class="w-full p-2 border border-gray-300 rounded">
+                </div>
+                
+                <input type="hidden" name="redirect" value="{{ request.query_params.get('redirect', '/') }}">
+                <button type="submit" 
+                        class="w-full px-4 py-2 sm:px-6 sm:py-3 rounded shadow hover:opacity-90 transition text-sm sm:text-base md:text-lg"
+                        style="background-color: var(--brown); color: var(--offwhite);">
+                    Login
+                </button>
+            </form>
+        </div>
+    </main>
+    
+    {% include "_footer.html" %}
+</body>
+</html>

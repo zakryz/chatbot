@@ -2,9 +2,15 @@
     <div class="container mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
         <a href="/" class="text-xl sm:text-2xl font-bold" style="color: var(--black);">Chatbot API</a>
         <nav class="flex flex-wrap gap-2 sm:gap-4">
-            <a href="/chat" class="hover:underline" style="color: var(--brown);">Chatbot</a>
-            <a href="/docs" class="hover:underline" style="color: var(--brown);">API Docs</a>
-            <a href="https://github.com/zakryz/chatbot/" class="hover:underline" style="color: var(--brown);">GitHub</a>
+            {% if is_authenticated %}
+                <a href="/chat" class="hover:underline" style="color: var(--brown);">Chatbot</a>
+                <a href="/docs" class="hover:underline" style="color: var(--brown);">API Docs</a>
+                <a href="https://github.com/zakryz/chatbot/" class="hover:underline" style="color: var(--brown);">GitHub</a>
+                <a href="/logout" class="hover:underline" style="color: var(--brown);">Logout ({{ username }})</a>
+            {% else %}
+                <a href="https://github.com/zakryz/chatbot/" class="hover:underline" style="color: var(--brown);">GitHub</a>
+                <a href="/login" class="hover:underline" style="color: var(--brown);">Login</a>
+            {% endif %}
         </nav>
     </div>
 </header>
